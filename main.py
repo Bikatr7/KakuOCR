@@ -19,6 +19,9 @@ PROCESS_EVERY_N_FRAMES = 2
 DETECTION_FRAME_WIDTH = 640
 DETECTION_FRAME_HEIGHT = 360
 
+THUMBNAIL_WIDTH = 200
+THUMBNAIL_HEIGHT = 150
+
 cap = cv2.VideoCapture(0)
 if(not cap.isOpened()):
     print("Error: Could not open webcam.")
@@ -49,6 +52,7 @@ drawing = False
 clear_canvas = False
 undo_action = False
 redo_action = False
+submit_action = False
 
 font = cv2.FONT_HERSHEY_SIMPLEX
 font_scale = 1
@@ -57,8 +61,10 @@ line_type = 2
 
 shift_pressed = False
 
+submitted_drawing = None
+
 def on_press(key):
-    global drawing, clear_canvas, undo_action, redo_action, shift_pressed
+    global drawing, clear_canvas, undo_action, redo_action, shift_pressed, submit_action
     if(key == keyboard.KeyCode.from_char('d')):
         drawing = True
     elif(key == keyboard.KeyCode.from_char('c')):
@@ -71,6 +77,8 @@ def on_press(key):
         shift_pressed = True
     elif(key == keyboard.KeyCode.from_char('q')):
         return False
+    elif(key == keyboard.KeyCode.from_char('s')):
+        submit_action = True
 
 def on_release(key):
     global drawing, shift_pressed
@@ -125,10 +133,14 @@ with mp_hands.Hands(
 
         combined = cv2.add(frame, canvas)
 
-        status_text = "Drawing Mode: ON" if drawing else "Drawing Mode: OFF"
-        cv2.putText(combined, status_text, (10, 30), font, font_scale, font_color, line_type)
+        ## Display submitted drawing
+        if(submitted_drawing is not None):
+            combined[:THUMBNAIL_HEIGHT, :THUMBNAIL_WIDTH] = submitted_drawing
 
-        instructions = "Hold 'd' to draw | 'c' to clear | 'z' to undo | 'Shift+Z' to redo | 'q' to quit"
+        status_text = "Drawing Mode: ON" if drawing else "Drawing Mode: OFF"
+        cv2.putText(combined, status_text, (10, frame_height - 60), font, font_scale, font_color, line_type)
+
+        instructions = "Hold 'd' to draw | 'c' to clear | 'z' to undo | 'Shift+Z' to redo | 's' to submit | 'q' to quit"
         cv2.putText(combined, instructions, (10, frame_height - 20), font, 0.6, (200, 200, 200), 1, cv2.LINE_AA)
 
         cv2.imshow(window_name, combined)
@@ -150,6 +162,14 @@ with mp_hands.Hands(
                 canvas = redo_history.pop()
                 canvas_history.append(canvas.copy())
             redo_action = False
+
+        if(submit_action):
+            if(np.any(canvas != 0)):  ## Only submit if canvas is not empty
+                submitted_drawing = cv2.resize(canvas, (THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT))
+                canvas = np.zeros((frame_height, frame_width, 3), dtype=np.uint8)
+                canvas_history = [canvas.copy()]
+                redo_history.clear()
+            submit_action = False
 
         if(cv2.waitKey(1) & 0xFF == ord('q')):
             break
