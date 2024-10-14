@@ -40,30 +40,44 @@ cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
 cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
 canvas = np.zeros((frame_height, frame_width, 3), dtype=np.uint8)
+canvas_history = [canvas.copy()]
+redo_history = []
 
 prev_x, prev_y = None, None
 
 drawing = False
 clear_canvas = False
+undo_action = False
+redo_action = False
 
 font = cv2.FONT_HERSHEY_SIMPLEX
 font_scale = 1
 font_color = (255, 255, 255)  ## White
 line_type = 2
 
+shift_pressed = False
+
 def on_press(key):
-    global drawing, clear_canvas
+    global drawing, clear_canvas, undo_action, redo_action, shift_pressed
     if(key == keyboard.KeyCode.from_char('d')):
         drawing = True
     elif(key == keyboard.KeyCode.from_char('c')):
         clear_canvas = True
+    elif(key == keyboard.KeyCode.from_char('Z')):  ## Capital Z indicates Shift+Z
+        redo_action = True
+    elif(key == keyboard.KeyCode.from_char('z')):
+        undo_action = True
+    elif(key == keyboard.Key.shift):
+        shift_pressed = True
     elif(key == keyboard.KeyCode.from_char('q')):
         return False
 
 def on_release(key):
-    global drawing
+    global drawing, shift_pressed
     if(key == keyboard.KeyCode.from_char('d')):
         drawing = False
+    elif(key == keyboard.Key.shift):
+        shift_pressed = False
 
 listener = keyboard.Listener(on_press=on_press, on_release=on_release)
 listener.start()
@@ -98,6 +112,8 @@ with mp_hands.Hands(
                     if(drawing):
                         if(prev_x is not None and prev_y is not None):
                             cv2.line(canvas, (prev_x, prev_y), (x, y), DRAW_COLOR, DRAW_THICKNESS)
+                            canvas_history.append(canvas.copy())
+                            redo_history.clear()  ## Clear redo history when a new action is performed
                         prev_x, prev_y = x, y
                     else:
                         prev_x, prev_y = None, None
@@ -112,14 +128,28 @@ with mp_hands.Hands(
         status_text = "Drawing Mode: ON" if drawing else "Drawing Mode: OFF"
         cv2.putText(combined, status_text, (10, 30), font, font_scale, font_color, line_type)
 
-        instructions = "Hold 'd' to draw | Press 'c' to clear | Press 'q' to quit."
+        instructions = "Hold 'd' to draw | 'c' to clear | 'z' to undo | 'Shift+Z' to redo | 'q' to quit"
         cv2.putText(combined, instructions, (10, frame_height - 20), font, 0.6, (200, 200, 200), 1, cv2.LINE_AA)
 
         cv2.imshow(window_name, combined)
 
         if(clear_canvas):
             canvas = np.zeros((frame_height, frame_width, 3), dtype=np.uint8)
+            canvas_history = [canvas.copy()]
+            redo_history.clear()
             clear_canvas = False
+
+        if(undo_action):
+            if(len(canvas_history) > 1):
+                redo_history.append(canvas_history.pop())
+                canvas = canvas_history[-1].copy()
+            undo_action = False
+
+        if(redo_action):
+            if(redo_history):
+                canvas = redo_history.pop()
+                canvas_history.append(canvas.copy())
+            redo_action = False
 
         if(cv2.waitKey(1) & 0xFF == ord('q')):
             break
