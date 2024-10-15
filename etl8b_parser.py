@@ -1,12 +1,5 @@
 from PIL import Image
-import os
-import logging
 import bitstring
-from collections import Counter
-
-## Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 class ETL8B_Record:
     def __init__(self):
@@ -40,28 +33,5 @@ def read_record_etl8b(file):
     while(f.pos < f.length):
         record = etl8b_record.read(f)
         char = etl8b_record.get_char(record)
-        yield char, record['Serial Sheet Number'], record['JIS Kanji Code']
-
-## Set working directory dynamically to where the script is located
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
-
-file_path = 'ETL8B/ETL8B/ETL8B2C1'
-
-## Read all characters and collect statistics
-char_counter = Counter()
-total_records = 0
-
-for char, serial, jis_code in read_record_etl8b(file_path):
-    char_counter[char] += 1
-    total_records += 1
-
-## Print summary
-logger.info(f"Total number of records: {total_records}")
-logger.info(f"Number of unique characters: {len(char_counter)}")
-logger.info("Top 10 most common characters:")
-for char, count in char_counter.most_common(10):
-    logger.info(f"  '{char}': {count} occurrences")
-
-logger.info("Character distribution:")
-logger.info(f"  Most common: '{char_counter.most_common(1)[0][0]}' ({char_counter.most_common(1)[0][1]} occurrences)")
-logger.info(f"  Least common: '{char_counter.most_common()[-1][0]}' ({char_counter.most_common()[-1][1]} occurrences)")
+        img = record['Image Data']
+        yield char, img

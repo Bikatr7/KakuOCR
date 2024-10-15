@@ -162,3 +162,5 @@ cython_debug/
 ETL8B/
 info.txt
 .cursorrules
+etl8b_model.pth
+.vscode/
