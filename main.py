@@ -7,7 +7,7 @@ import time
 import torch
 from model import CNN
 from torchvision import transforms
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 mp_drawing = mp.solutions.drawing_utils ## type: ignore
 mp_hands = mp.solutions.hands ## type: ignore
@@ -73,6 +73,9 @@ transform = None
 char_to_index = None
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+FONT_PATH = r"NotoSansJP-VariableFont_wght.ttf"  ## Replace with the path to a Japanese font file
+FONT_SIZE = 30
+
 def load_model():
     global model, transform, char_to_index, device
     
@@ -111,6 +114,13 @@ def predict(image):
     ## Convert predicted index back to character
     index_to_char = {v: k for k, v in char_to_index.items()} ## type: ignore
     return index_to_char[predicted.item()]
+
+def render_japanese_text(text, size):
+    font = ImageFont.truetype(FONT_PATH, FONT_SIZE)
+    image = Image.new("RGB", size, (0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    draw.text((0, 0), text, font=font, fill=(255, 255, 255))
+    return np.array(image)
 
 def on_press(key):
     global drawing, clear_canvas, undo_action, redo_action, shift_pressed, submit_action
@@ -183,6 +193,11 @@ with mp_hands.Hands(
 
         combined = cv2.add(frame, canvas)
 
+        ## Display predicted character above the submitted drawing
+        if(predicted_char is not None):
+            char_image = render_japanese_text(f"Predicted: {predicted_char}", (200, 50))
+            combined[THUMBNAIL_HEIGHT:THUMBNAIL_HEIGHT+50, :200] = char_image
+
         ## Display submitted drawing
         if(submitted_drawing is not None):
             combined[:THUMBNAIL_HEIGHT, :THUMBNAIL_WIDTH] = submitted_drawing
@@ -192,9 +207,6 @@ with mp_hands.Hands(
 
         instructions = "Hold 'd' to draw | 'c' to clear | 'z' to undo | 'Shift+Z' to redo | 's' to submit | 'q' to quit"
         cv2.putText(combined, instructions, (10, frame_height - 20), font, 0.6, (200, 200, 200), 1, cv2.LINE_AA)
-
-        if(predicted_char is not None):
-            cv2.putText(combined, f"Predicted: {predicted_char}", (10, 30), font, font_scale, font_color, line_type)
 
         cv2.imshow(window_name, combined)
 
