@@ -4,9 +4,13 @@ import numpy as np
 from pynput import keyboard
 import sys
 import time
+import torch
+from model import CNN
+from torchvision import transforms
+from PIL import Image
 
-mp_drawing = mp.solutions.drawing_utils
-mp_hands = mp.solutions.hands
+mp_drawing = mp.solutions.drawing_utils ## type: ignore
+mp_hands = mp.solutions.hands ## type: ignore
 
 DRAW_COLOR = (0, 0, 255)  ## RED
 DRAW_THICKNESS = 4
@@ -62,6 +66,51 @@ line_type = 2
 shift_pressed = False
 
 submitted_drawing = None
+predicted_char = None 
+
+model = None
+transform = None
+char_to_index = None
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+def load_model():
+    global model, transform, char_to_index, device
+    
+    char_to_index = torch.load("char_to_index.pth")
+    num_classes = len(char_to_index)
+    
+    model = CNN(num_classes=num_classes)
+    state_dict = torch.load("etl8b_model.pth", map_location=device)
+    
+    ## Remove fc1 from state_dict if it exists
+    state_dict = {k: v for k, v in state_dict.items() if not k.startswith('fc1')}
+    
+    model.load_state_dict(state_dict, strict=False)
+    model = model.to(device) 
+    model.eval()
+    
+    transform = transforms.Compose([
+        transforms.Resize((64, 64)),
+        transforms.Grayscale(),
+        transforms.ToTensor(),
+    ])
+
+def predict(image):
+    global model, transform, char_to_index, device
+    
+    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    
+    pil_image = Image.fromarray(gray_image)
+    
+    tensor_image = transform(pil_image).unsqueeze(0).to(device) ## type: ignore
+    
+    with torch.no_grad():
+        output = model(tensor_image) ## type: ignore
+        _, predicted = torch.max(output, 1)
+    
+    ## Convert predicted index back to character
+    index_to_char = {v: k for k, v in char_to_index.items()} ## type: ignore
+    return index_to_char[predicted.item()]
 
 def on_press(key):
     global drawing, clear_canvas, undo_action, redo_action, shift_pressed, submit_action
@@ -87,7 +136,7 @@ def on_release(key):
     elif(key == keyboard.Key.shift):
         shift_pressed = False
 
-listener = keyboard.Listener(on_press=on_press, on_release=on_release)
+listener = keyboard.Listener(on_press=on_press, on_release=on_release) ## type: ignore
 listener.start()
 
 with mp_hands.Hands(
@@ -96,6 +145,7 @@ with mp_hands.Hands(
     min_tracking_confidence=0.7
 ) as hands:
     frame_count = 0
+    load_model()
     while(True):
         start_time = time.time()
         
@@ -143,12 +193,17 @@ with mp_hands.Hands(
         instructions = "Hold 'd' to draw | 'c' to clear | 'z' to undo | 'Shift+Z' to redo | 's' to submit | 'q' to quit"
         cv2.putText(combined, instructions, (10, frame_height - 20), font, 0.6, (200, 200, 200), 1, cv2.LINE_AA)
 
+        if(predicted_char is not None):
+            cv2.putText(combined, f"Predicted: {predicted_char}", (10, 30), font, font_scale, font_color, line_type)
+
         cv2.imshow(window_name, combined)
 
         if(clear_canvas):
             canvas = np.zeros((frame_height, frame_width, 3), dtype=np.uint8)
             canvas_history = [canvas.copy()]
             redo_history.clear()
+            submitted_drawing = None  
+            predicted_char = None  
             clear_canvas = False
 
         if(undo_action):
@@ -166,6 +221,11 @@ with mp_hands.Hands(
         if(submit_action):
             if(np.any(canvas != 0)):  ## Only submit if canvas is not empty
                 submitted_drawing = cv2.resize(canvas, (THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT))
+
+                predicted_char = predict(canvas)
+
+                print(f"Predicted character: {predicted_char}")
+                
                 canvas = np.zeros((frame_height, frame_width, 3), dtype=np.uint8)
                 canvas_history = [canvas.copy()]
                 redo_history.clear()

@@ -65,12 +65,13 @@ def main():
     optimizer = optim.Adam(model.parameters()) ## type: ignore
 
     ## 50 epochs
-    for epoch in range(1, 51):
+    for epoch in range(1, 6):
         train(model, device, train_loader, optimizer, epoch)
         test(model, device, test_loader)
 
     torch.save(model.state_dict(), "etl8b_model.pth")
-    logger.info("Model saved to etl8b_model.pth")
+    torch.save(dataset.char_to_index, "char_to_index.pth")
+    logger.info("Model and char_to_index mapping saved")
 
 if(__name__ == "__main__"):
     main()

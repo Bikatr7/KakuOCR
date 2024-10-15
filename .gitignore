@@ -163,4 +163,5 @@ ETL8B/
 info.txt
 .cursorrules
 etl8b_model.pth
+char_to_index.pth
 .vscode/

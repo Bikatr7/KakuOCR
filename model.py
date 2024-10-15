@@ -8,7 +8,7 @@ class CNN(nn.Module):
         self.conv2 = nn.Conv2d(32, 64, 3, 1)
         self.dropout1 = nn.Dropout(0.25)
         self.dropout2 = nn.Dropout(0.5)
-        self.fc1 = None  ## We'll initialize this in the forward pass later
+        self.fc1 = None  # We'll initialize this in the forward pass
         self.fc2 = nn.Linear(128, num_classes)
 
     def forward(self, x):
