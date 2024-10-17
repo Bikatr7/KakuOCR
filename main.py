@@ -83,7 +83,7 @@ def load_model():
     num_classes = len(char_to_index)
     
     model = CNN(num_classes=num_classes)
-    state_dict = torch.load("etl8b_model.pth", map_location=device)
+    state_dict = torch.load("etl8b_model_best.pth", map_location=device)
     
     ## Remove fc1 from state_dict if it exists
     state_dict = {k: v for k, v in state_dict.items() if not k.startswith('fc1')}
@@ -108,11 +108,11 @@ def predict(image):
     ## Convert to PIL Image
     pil_image = Image.fromarray(rgb_image)
     
-    tensor_image = transform(pil_image).unsqueeze(0).to(device) ## type: ignore
-
-    debug_image = transforms.ToPILImage()(tensor_image.squeeze())
-    debug_image.save("debug_input.png")
+    ## Preprocess the image
+    pil_image = pil_image.convert('L')  ## Convert to grayscale
+    pil_image = pil_image.point(lambda x: 255 if x > 128 else 0, '1')  ## Binarize
     
+    tensor_image = transform(pil_image).unsqueeze(0).to(device) ## type: ignore
     with torch.no_grad():
         output = model(tensor_image) ## type: ignore
         probabilities = torch.nn.functional.softmax(output, dim=1)

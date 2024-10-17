@@ -38,9 +38,11 @@ def test(model, device, test_loader):
             correct += pred.eq(target.view_as(pred)).sum().item()
 
     test_loss /= len(test_loader.dataset)
+    accuracy = 100. * correct / len(test_loader.dataset)
     logger.info(f'\nTest set: Average loss: {test_loss:.4f}, '
                 f'Accuracy: {correct}/{len(test_loader.dataset)} '
-                f'({100. * correct / len(test_loader.dataset):.1f}%)\n')
+                f'({accuracy:.1f}%)\n')
+    return accuracy
 
 def main():
     ## Set working directory dynamically to where the script is located
@@ -50,9 +52,11 @@ def main():
 
     transform = transforms.Compose([
         transforms.ToTensor(),
+        transforms.Normalize((0.5,), (0.5,))
     ])
 
     dataset = ETL8BDataset(file_path, transform=transform)
+    
     train_size = int(0.8 * len(dataset))
     test_size = len(dataset) - train_size
     train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size]) ## type: ignore
@@ -62,14 +66,31 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = CNN(num_classes=dataset.get_num_classes()).to(device)
-    optimizer = optim.Adam(model.parameters()) ## type: ignore
+    optimizer = optim.Adam(model.parameters(), lr=0.001) ## type: ignore
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5, factor=0.5)
 
-    ## 50 epochs
-    for epoch in range(1, 50):
+    best_accuracy = 0
+    patience = 10
+    patience_counter = 0
+
+    for epoch in range(1, 100):
         train(model, device, train_loader, optimizer, epoch)
-        test(model, device, test_loader)
+        accuracy = test(model, device, test_loader)
+        
+        scheduler.step(accuracy)
+        
+        if(accuracy > best_accuracy):
+            best_accuracy = accuracy
+            torch.save(model.state_dict(), "etl8b_model_best.pth")
+            patience_counter = 0
+        else:
+            patience_counter += 1
+        
+        if(patience_counter >= patience):
+            logger.info(f"Early stopping at epoch {epoch}")
+            break
 
-    torch.save(model.state_dict(), "etl8b_model.pth")
+    torch.save(model.state_dict(), "etl8b_model_final.pth")
     torch.save(dataset.char_to_index, "char_to_index.pth")
     logger.info("Model and char_to_index mapping saved")
 
