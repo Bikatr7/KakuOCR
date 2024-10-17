@@ -12,8 +12,8 @@ from PIL import Image, ImageDraw, ImageFont
 mp_drawing = mp.solutions.drawing_utils ## type: ignore
 mp_hands = mp.solutions.hands ## type: ignore
 
-DRAW_COLOR = (0, 0, 255)  ## RED
-DRAW_THICKNESS = 4
+DRAW_COLOR = (255, 255, 255)  ## WHITE
+DRAW_THICKNESS = 70
 MAX_NUM_HANDS = 1
 
 FRAME_WIDTH = 1280         
@@ -93,26 +93,36 @@ def load_model():
     model.eval()
     
     transform = transforms.Compose([
-        transforms.Resize((64, 64)),
+        transforms.Resize((64, 63)),  
         transforms.Grayscale(),
         transforms.ToTensor(),
+        transforms.Normalize((0.5,), (0.5,))
     ])
 
 def predict(image):
     global model, transform, char_to_index, device
     
-    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    ## Convert BGR to RGB
+    rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     
-    pil_image = Image.fromarray(gray_image)
+    ## Convert to PIL Image
+    pil_image = Image.fromarray(rgb_image)
     
     tensor_image = transform(pil_image).unsqueeze(0).to(device) ## type: ignore
+
+    debug_image = transforms.ToPILImage()(tensor_image.squeeze())
+    debug_image.save("debug_input.png")
     
     with torch.no_grad():
         output = model(tensor_image) ## type: ignore
+        probabilities = torch.nn.functional.softmax(output, dim=1)
         _, predicted = torch.max(output, 1)
     
-    ## Convert predicted index back to character
+    top5_prob, top5_idx = torch.topk(probabilities, 5)
     index_to_char = {v: k for k, v in char_to_index.items()} ## type: ignore
+    for i in range(5):
+        print(f"Top {i+1}: {index_to_char[top5_idx[0][i].item()]} (Probability: {top5_prob[0][i].item():.4f})")
+    
     return index_to_char[predicted.item()]
 
 def render_japanese_text(text, size):

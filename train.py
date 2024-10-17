@@ -65,7 +65,7 @@ def main():
     optimizer = optim.Adam(model.parameters()) ## type: ignore
 
     ## 50 epochs
-    for epoch in range(1, 6):
+    for epoch in range(1, 50):
         train(model, device, train_loader, optimizer, epoch)
         test(model, device, test_loader)
 

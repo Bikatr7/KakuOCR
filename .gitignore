@@ -166,3 +166,4 @@ etl8b_model.pth
 char_to_index.pth
 .vscode/
 extracted_images/
+debug_input.png
