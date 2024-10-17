@@ -5,10 +5,10 @@
 
 "Planned things"
 
-- Better writing experience (less lag, less jittery)
-- Should be able to get the writing and display it in the top left or something rather than just the canvas
-- OCR (I want to 'train' our own model) (We can use the  J-HOCR, JAIST, Kondate, ETL datasets)
-- Maybe translation?
+- ~~Better writing experience (less lag, less jittery)~~
+- ~~Should be able to get the writing and display it in the top left or something rather than just the canvas~~
+- ~~OCR (I want to 'train' our own model) (We can use the  J-HOCR, JAIST, Kondate, ETL datasets)~~
+- Need to get the actual prediction correct
 
 
 ## Want to help?

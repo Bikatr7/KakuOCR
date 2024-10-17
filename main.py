@@ -73,7 +73,7 @@ transform = None
 char_to_index = None
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-FONT_PATH = r"NotoSansJP-VariableFont_wght.ttf"  ## Replace with the path to a Japanese font file
+FONT_PATH = r"NotoSansJP-VariableFont_wght.ttf"  ## Replace with the path to a Japanese font file if you want to use a different one from the one included in the repo.
 FONT_SIZE = 30
 
 def load_model():
