@@ -4,3 +4,6 @@ numpy
 keyboard
 bitstring
 Pillow
+torch
+torchvision
+pynput
