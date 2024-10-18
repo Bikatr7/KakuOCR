@@ -1,9 +1,8 @@
 opencv-python
 mediapipe
 numpy 
-keyboard
+pynput
 bitstring
 Pillow
 torch
 torchvision
-pynput

@@ -15,11 +15,15 @@ mediapipe
 
 numpy 
 
-keyboard
+pynput
 
 bitstring
 
 Pillow
+
+torch
+
+torchvision
 
 ### Setup
 
