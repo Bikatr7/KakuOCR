@@ -79,11 +79,11 @@ FONT_SIZE = 30
 def load_model():
     global model, transform, char_to_index, device
     
-    char_to_index = torch.load("char_to_index.pth")
+    char_to_index = torch.load("pre_trained_models/char_to_index.pth")
     num_classes = len(char_to_index)
     
     model = CNN(num_classes=num_classes)
-    state_dict = torch.load("etl8b_model_best.pth", map_location=device)
+    state_dict = torch.load("pre_trained_models/etl8b_model_best.pth", map_location=device)
     
     ## Remove fc1 from state_dict if it exists
     state_dict = {k: v for k, v in state_dict.items() if not k.startswith('fc1')}

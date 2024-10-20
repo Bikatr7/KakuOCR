@@ -166,5 +166,3 @@ etl8b_model.pth
 .vscode/
 extracted_images/
 debug_input.png
-etl8b_model_best.pth
-etl8b_model_final.pth
