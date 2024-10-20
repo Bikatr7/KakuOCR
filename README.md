@@ -60,6 +60,7 @@ Press `q` to quit.
 - ~~Optimize~~
 - ~~Fix the laggy drawing for real this time~~
 - ~~Add more data~~
+- Try to address relative size playing an issue in detection
 - Make it to where it can detect multiple characters
 
 ### Model Structure
