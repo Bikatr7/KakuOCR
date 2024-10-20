@@ -57,5 +57,5 @@ def analyze_etl8b(file_path):
     print(f"Average white pixels per image: {avg_white_pixels:.2f} ({avg_white_percentage:.2f}%)")
 
 if(__name__ == "__main__"):
-    etl8b_file_path = "ETL8B/ETL8B/ETL8B2C1"  ## Replace with the actual path to your ETL8B file
+    etl8b_file_path = "ETL8B/ETL8B/ETL8B2C1"
     analyze_etl8b(etl8b_file_path)

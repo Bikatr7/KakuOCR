@@ -3,6 +3,10 @@ Write Japanese with your finger, and it will be recognized (hopefully,)
 
 # Overview
 
+## Data
+
+You can get the data used from [here](http://etlcdb.db.aist.go.jp/)
+
 ## To use
 
 ### Requirements
@@ -54,25 +58,28 @@ Press `q` to quit.
 - ~~OCR (I want to 'train' our own model) (We can use the  J-HOCR, JAIST, Kondate, ETL datasets)~~
 - ~~Need to get the actual prediction correct~~
 - ~~Optimize~~
-- Fix the laggy drawing for real this time
-- Add more data
+- ~~Fix the laggy drawing for real this time~~
+- ~~Add more data~~
+- Make it to where it can detect multiple characters
 
 ### Model Structure
 
-Trained on 51200 images of Japanese characters (ETL8BC1)
+This data may be slightly off.
 
-160 occurrences of 320 characters (64x64) (Pretty basic kana and kanji, can add the other ETL8B datasets later)
+Trained on 153,916 images of Japanese characters (ETL8B2C1, ETL8B2C2, ETL8B2C3)
+
+161 occurrences of 956 unique characters (64x64)
 
 The model is a Convolutional Neural Network (CNN) with the following structure:
 
 1. Feature Extraction:
-   - Conv2d(1, 32, 3x3, padding=1) + ReLU
-   - Conv2d(32, 64, 3x3, padding=1) + ReLU
+   - Conv2d(1, 32, 3x3, padding=1) + BatchNorm2d + ReLU
    - MaxPool2d(2x2)
-   - Conv2d(64, 128, 3x3, padding=1) + ReLU
-   - Conv2d(128, 128, 3x3, padding=1) + ReLU
+   - Conv2d(32, 64, 3x3, padding=1) + BatchNorm2d + ReLU
    - MaxPool2d(2x2)
-   - Conv2d(128, 256, 3x3, padding=1) + ReLU
+   - Conv2d(64, 128, 3x3, padding=1) + BatchNorm2d + ReLU
+   - MaxPool2d(2x2)
+   - Conv2d(128, 256, 3x3, padding=1) + BatchNorm2d + ReLU
    - AdaptiveAvgPool2d(1x1)
 
 2. Classifier:
@@ -81,47 +88,47 @@ The model is a Convolutional Neural Network (CNN) with the following structure:
    - Dropout(0.5)
    - Linear(512, num_classes)
 
-3. Output: Log Softmax
-
 The model is trained using:
-- Loss function: Negative Log Likelihood Loss (NLL Loss)
-- Optimizer: Adam
-- Batch size: 64
-- Number of epochs: Up to 100 with early stopping
+- Loss function: Cross Entropy Loss with label smoothing (0.1)
+- Optimizer: Adam with weight decay (1e-5)
+- Batch size: 128
+- Number of epochs: Up to 200 with early stopping (patience: 20)
 - Learning rate scheduler: ReduceLROnPlateau
+- Initial learning rate: 0.0003
 
 Data augmentation techniques:
-- Random affine transformations (rotation, translation, scaling, shearing)
-- Random perspective
-- Random inversion
-- Random Gaussian blur
+- Random rotation (±10 degrees)
+- Random affine transformations (translation, scaling)
+- Elastic transform
+- Normalization
 
-The dataset used is the ETL8B dataset, which contains Japanese characters. The data is split into 80% training and 20% testing sets.
+The dataset used combines ETL8B2C1, ETL8B2C2, and ETL8B2C3, which contain a wide range of Japanese characters including kana and kanji. The data is split into 80% training and 20% testing sets.
 
-Output: Predicted Japanese character (from the set of characters in the ETL8B dataset)
+Output: Predicted Japanese character (from the set of 956 unique characters in the combined ETL8B datasets)
 
 ### Analysis
 
-The model performs exceptionally well on the ETL8B dataset, achieving an accuracy of over 98% on the test set. Training for about 100 epochs yields this high accuracy, with the loss decreasing significantly throughout the training process.
+The model performs exceptionally well on the combined ETL8B dataset, achieving an accuracy of over 96% on the test set. Training for about 67 epochs yields this high accuracy, with the loss decreasing significantly throughout the training process.
+
+Fine tuning this on my hand drawn data would probably improve the accuracy even more.
 
 Key observations:
-1. The model quickly improves from an initial low accuracy to over 90% within the first 10 epochs.
-2. By epoch 30, the accuracy reaches around 97% and continues to improve gradually.
-3. In the final epochs, the accuracy consistently stays above 98%, with peaks reaching 98.5%.
-4. The loss decreases from initial values around 5.7 to final values around 0.05.
+1. The model quickly improves from an initial low accuracy to over 90% within the first 20-25 epochs.
+2. By epoch 30, the accuracy reaches around 95% and continues to improve gradually.
+3. In the later epochs (50+), the accuracy consistently stays above 95.7%, with peaks reaching 96.5%.
+4. The loss decreases from initial values around 6.8 to final values around 1.7-1.8.
 
 The current model shows significant improvement over the previous version:
-- It no longer "completely fails on anything that's not in the training set."
-- The accuracy has improved from about 80% to over 98%.
-- The model now generalizes well to hand-drawn input, despite being trained on the ETL8B dataset.
+- It now handles a much larger set of characters (956 vs 320 previously).
+- The accuracy has improved from about 98% on a smaller character set to over 96% on a much larger and more diverse character set.
+- The model demonstrates good generalization despite the increased complexity of the task.
 
 Potential areas for further improvement:
-1. Expanding the dataset: While the model performs well with ETL8BC1, incorporating more data from other ETL8B datasets could further improve its robustness and coverage of characters.
-2. Fine-tuning on hand-drawn data: Although the model generalizes well, creating a small dataset of hand-drawn characters and fine-tuning on it could potentially improve performance on user input.
-3. Exploring more complex architectures: While the current CNN performs well, experimenting with more advanced architectures (e.g., residual networks, attention mechanisms) might yield even better results.
-4. Optimizing for inference speed: Depending on the target hardware, the model could be optimized for faster inference while maintaining high accuracy.
+1. Fine-tuning on hand-drawn data: Although the model generalizes well, creating a small dataset of hand-drawn characters and fine-tuning on it could potentially improve performance on user input.
+2. Exploring more complex architectures: While the current CNN performs well, experimenting with more advanced architectures (e.g., residual networks, attention mechanisms) might yield even better results.
+3. Optimizing for inference speed: Depending on the target hardware, the model could be optimized for faster inference while maintaining high accuracy.
 
-Overall, the current model demonstrates strong performance and practical usability for recognizing both printed and hand-drawn Japanese characters. Although I suspect it will completely botch anything that isn't kana or basic kanji.
+Overall, the current model demonstrates strong performance and practical usability for recognizing a wide range of Japanese characters, including both kana and a substantial set of kanji. As even with that much data 900 is still a bit low.
 
 ## Want to help?
 

@@ -4,11 +4,15 @@ from torchvision import transforms
 from PIL import Image
 
 class ETL8BDataset(Dataset):
-    def __init__(self, file_path, transform=None):
+    def __init__(self, file_path, transform=None, char_to_index=None):
         self.file_path = file_path
         self.transform = transform
         self.data = list(read_record_etl8b(file_path))
-        self.char_to_index = {char: idx for idx, char in enumerate(set(char for char, _ in self.data))}
+        
+        if(char_to_index is None):
+            self.char_to_index = {char: idx for idx, char in enumerate(set(char for char, _ in self.data))}
+        else:
+            self.char_to_index = char_to_index
         
         ## Ensure all images are resized to 64x64
         self.resize = transforms.Resize((64, 64))
